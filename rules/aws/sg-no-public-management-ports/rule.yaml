@@ -1,0 +1,19 @@
+id: sg-no-public-management-ports
+name: Security group does not expose SSH or RDP to the internet
+description: No security group ingress rule may allow 0.0.0.0/0 or ::/0 to reach port 22 or 3389 over TCP or UDP, or allow all traffic.
+severity: CRITICAL
+target_native_types: [securityGroup]
+nist_800_53: [SC-7, AC-17]
+remediation: |
+  Remove the public rule. Use AWS Systems Manager Session Manager for shell and RDP access, or restrict the source to a known CIDR.
+
+  ```hcl
+  resource "aws_vpc_security_group_ingress_rule" "ssh_admin" {
+    security_group_id = aws_security_group.this.id
+    description       = "SSH from the admin network only"
+    ip_protocol       = "tcp"
+    from_port         = 22
+    to_port           = 22
+    cidr_ipv4         = "10.20.0.0/24"
+  }
+  ```
