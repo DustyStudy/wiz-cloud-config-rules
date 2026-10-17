@@ -1,0 +1,38 @@
+id: s3-deny-insecure-transport
+name: S3 bucket policy denies insecure transport
+description: The bucket policy must deny every S3 request made without TLS, for all principals, on the bucket and its objects.
+severity: HIGH
+target_native_types: [bucket]
+nist_800_53: [SC-8, SC-8(1)]
+remediation: |
+  Add a deny statement for requests where aws:SecureTransport is false.
+
+  ```hcl
+  data "aws_partition" "current" {}
+
+  data "aws_iam_policy_document" "tls_only" {
+    statement {
+      sid     = "DenyInsecureTransport"
+      effect  = "Deny"
+      actions = ["s3:*"]
+      resources = [
+        "arn:${data.aws_partition.current.partition}:s3:::${aws_s3_bucket.this.id}",
+        "arn:${data.aws_partition.current.partition}:s3:::${aws_s3_bucket.this.id}/*",
+      ]
+      principals {
+        type        = "*"
+        identifiers = ["*"]
+      }
+      condition {
+        test     = "Bool"
+        variable = "aws:SecureTransport"
+        values   = ["false"]
+      }
+    }
+  }
+
+  resource "aws_s3_bucket_policy" "this" {
+    bucket = aws_s3_bucket.this.id
+    policy = data.aws_iam_policy_document.tls_only.json
+  }
+  ```

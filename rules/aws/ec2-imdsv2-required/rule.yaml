@@ -1,0 +1,21 @@
+id: ec2-imdsv2-required
+name: EC2 instance requires IMDSv2
+description: EC2 instances must require session tokens (IMDSv2) for the instance metadata service, or have the metadata endpoint disabled.
+severity: HIGH
+target_native_types: [instance]
+nist_800_53: [AC-3, CM-6]
+remediation: |
+  Require IMDSv2 on the instance:
+
+  ```sh
+  aws ec2 modify-instance-metadata-options --instance-id <id> --http-tokens required --http-endpoint enabled
+  ```
+
+  And in Terraform, on `aws_instance` or `aws_launch_template`:
+
+  ```hcl
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
+  ```

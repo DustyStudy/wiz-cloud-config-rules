@@ -1,0 +1,20 @@
+id: cloudtrail-integrity
+name: CloudTrail trail has log validation, KMS encryption and multi-region coverage
+description: CloudTrail trails must validate log file integrity, encrypt logs with a KMS key, and cover all Regions. This checks trail configuration, not whether the trail is currently logging.
+severity: HIGH
+target_native_types: [trail]
+nist_800_53: [AU-9, AU-9(3), AU-12]
+remediation: |
+  Turn on log file validation, KMS encryption and multi-region coverage.
+
+  ```hcl
+  resource "aws_cloudtrail" "this" {
+    name                       = "org-trail"
+    s3_bucket_name             = aws_s3_bucket.trail.id
+    is_multi_region_trail      = true
+    enable_log_file_validation = true
+    kms_key_id                 = aws_kms_key.trail.arn
+  }
+  ```
+
+  This rule checks configuration only. Confirm the trail is logging with `aws cloudtrail get-trail-status`.
