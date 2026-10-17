@@ -31,4 +31,9 @@ variable "native_type_overrides" {
     condition     = alltrue([for types in values(var.native_type_overrides) : length(types) > 0 && alltrue([for t in types : trimspace(t) != ""])])
     error_message = "Each native_type_overrides entry needs at least one non-empty native type."
   }
+
+  validation {
+    condition     = length(setsubtract(keys(var.native_type_overrides), keys(local.all_rules))) == 0
+    error_message = "native_type_overrides has keys that are not rule IDs: ${join(", ", setsubtract(keys(var.native_type_overrides), keys(local.all_rules)))}."
+  }
 }

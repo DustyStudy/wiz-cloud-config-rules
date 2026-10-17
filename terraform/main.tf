@@ -16,16 +16,6 @@ locals {
   severities = ["INFORMATIONAL", "LOW", "MEDIUM", "HIGH", "CRITICAL"]
 }
 
-# Variable validation cannot see the rule list on Terraform 1.9, so unknown override keys are caught here.
-resource "terraform_data" "override_keys" {
-  lifecycle {
-    precondition {
-      condition     = length(setsubtract(keys(var.native_type_overrides), keys(local.all_rules))) == 0
-      error_message = "native_type_overrides has keys that are not rule IDs: ${join(", ", setsubtract(keys(var.native_type_overrides), keys(local.all_rules)))}."
-    }
-  }
-}
-
 resource "wiz_cloud_configuration_rule" "this" {
   for_each = local.rules
 
@@ -64,8 +54,8 @@ resource "wiz_cloud_configuration_rule" "this" {
       error_message = "Rule ${each.key} has invalid severity '${each.value.severity}'."
     }
     precondition {
-      condition     = length(lookup(var.native_type_overrides, each.key, each.value.target_native_types)) > 0
-      error_message = "Rule ${each.key} has no target_native_types."
+      condition     = length(lookup(var.native_type_overrides, each.key, each.value.target_native_types)) > 0 && alltrue([for t in lookup(var.native_type_overrides, each.key, each.value.target_native_types) : trimspace(t) != ""])
+      error_message = "Rule ${each.key} needs at least one non-empty target_native_types entry."
     }
   }
 }

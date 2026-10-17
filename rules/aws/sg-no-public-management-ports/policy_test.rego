@@ -92,3 +92,11 @@ test_string_ports_parse if {
 test_unavailable_message if {
 	wiz.currentConfiguration == "Security group ingress rules are not available." with input as {"GroupId": "sg-1"}
 }
+
+test_missing_protocol_fails if {
+	wiz.result == "fail" with input as sg([{"FromPort": 443, "ToPort": 443, "IpRanges": [{"CidrIp": "0.0.0.0/0"}]}])
+}
+
+test_null_protocol_fails if {
+	wiz.result == "fail" with input as sg([{"IpProtocol": null, "FromPort": 22, "ToPort": 22, "IpRanges": [{"CidrIp": "0.0.0.0/0"}]}])
+}

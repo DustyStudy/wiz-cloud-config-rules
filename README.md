@@ -21,7 +21,7 @@ the included Terraform module.
   absent. Policy documents are parsed whether Wiz hands them over as an
   object, a JSON string or a URL-encoded string. No rule hard-codes the
   `arn:aws:` partition, so the same rules work in GovCloud.
-- **Result:** 146 `opa test` cases across nine rules, each rule at 96% line
+- **Result:** 162 `opa test` cases across nine rules, each rule at 96% line
   coverage or higher, checked in OPA v1 and v0-compatible modes. Five
   `terraform test` runs prove the module's wiring on Terraform 1.9.8 and
   1.16.4 with a mocked Wiz provider.
@@ -48,8 +48,8 @@ flowchart LR
 | Rule | Fails when | Severity | NIST SP 800-53 |
 |---|---|---|---|
 | [`kms-cmk-rotation`](rules/aws/kms-cmk-rotation) | An enabled, customer managed, symmetric key with KMS-generated material has rotation off, or rotates less often than every 365 days | HIGH | SC-12, SC-28 |
-| [`s3-deny-insecure-transport`](rules/aws/s3-deny-insecure-transport) | No bucket policy statement denies `s3:*` for all principals on the bucket and its objects when `aws:SecureTransport` is false, or the policy is missing or unparseable | HIGH | SC-8, SC-8(1) |
-| [`s3-default-encryption-cmk`](rules/aws/s3-default-encryption-cmk) | Default encryption is missing, SSE-S3, or SSE-KMS / DSSE-KMS with no key ID or the `aws/s3` key | MEDIUM | SC-28, SC-12 |
+| [`s3-deny-insecure-transport`](rules/aws/s3-deny-insecure-transport) | No bucket policy statement denies `s3:*` for all principals on the bucket and its objects when `aws:SecureTransport` is false (statements may split bucket and objects), or the policy is missing or unparseable. Directory buckets are skipped | HIGH | SC-8, SC-8(1) |
+| [`s3-default-encryption-cmk`](rules/aws/s3-default-encryption-cmk) | Default encryption is missing, SSE-S3, or SSE-KMS / DSSE-KMS with no key ID or the `aws/s3` key. Directory buckets and access-log destinations are skipped | MEDIUM | SC-28, SC-12 |
 | [`s3-server-access-logging`](rules/aws/s3-server-access-logging) | Server access logging is off | MEDIUM | AU-2, AU-12 |
 | [`s3-versioning-enabled`](rules/aws/s3-versioning-enabled) | Versioning was never enabled or is suspended | MEDIUM | CP-9 |
 | [`sg-no-public-management-ports`](rules/aws/sg-no-public-management-ports) | Ingress from `0.0.0.0/0` or `::/0` reaches port 22 or 3389 over TCP or UDP, or allows all traffic | CRITICAL | SC-7, AC-17 |
@@ -89,7 +89,7 @@ provider "wiz" {
 module "wiz_rules" {
   source = "git::https://github.com/DustyStudy/wiz-cloud-config-rules.git//terraform?ref=v0.1.0"
 
-  # Pilot on a few accounts first, then remove to assess all accounts.
+  # Pilot on a few accounts first. Widening later may need a replace; see the README.
   # scope_account_ids = ["<wiz-cloud-account-id>"]
 }
 ```
@@ -132,7 +132,10 @@ Each rule gets three tags: `source = wiz-cloud-config-rules`, `rule_id`, and
    follow public examples; put any correction in `native_type_overrides`.
 2. Run each rule's built-in test against one real resource and compare field
    names. Rules accept AWS API PascalCase and lowerCamel keys.
-3. Apply with `scope_account_ids` set to one account.
+3. Apply with `scope_account_ids` set to one account. The provider marks
+   this argument Optional and Computed, so deleting it later may keep the
+   pilot scope in state. After widening, check the rule's scope in Wiz; if it
+   did not change, run `terraform apply -replace` on the rule.
 4. Review the findings before turning on `function_as_control`.
 
 **Known limits**
@@ -140,6 +143,10 @@ Each rule gets three tags: `source = wiz-cloud-config-rules`, `rule_id`, and
 - `s3-default-encryption-cmk` cannot tell a customer managed key from an AWS
   managed key by ID or ARN alone, so it flags only SSE-S3, a missing key ID
   and the `aws/s3` alias.
+- `s3-default-encryption-cmk` skips server access log destinations, which S3
+  only supports with SSE-S3. It finds them by a bucket policy that allows
+  `logging.s3.amazonaws.com`; a destination granted through the legacy
+  LogDelivery ACL still fails and needs an exemption in Wiz.
 - `cloudtrail-integrity` checks configuration. It does not show that the
   trail is logging; use `aws cloudtrail get-trail-status` for that.
 - Rules use common OPA built-ins (`json.unmarshal`, `urlquery.decode`,

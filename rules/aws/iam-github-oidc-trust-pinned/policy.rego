@@ -84,14 +84,25 @@ relevant contains s if {
 base_op(op) := trim_prefix(op, "ForAnyValue:")
 
 # pairs lists [operator, value] for every value of key k in a condition block.
-pairs(cond, k) := [[base_op(op), v] |
+# Condition key names are case-insensitive; k is lower case.
+pairs(cond, k) := [[op, v] |
 	some op, kv in cond
 	is_object(kv)
-	some v in as_list(object.get(kv, k, []))
+	some key, vals in kv
+	lower(key) == k
+	some v in as_list(vals)
 ]
 
+# values_for lists the values of key k under one operator.
+values_for(cond, k, op) := [p[1] | some p in pairs(cond, k); p[0] == op]
+
+pin_ops := {"StringEquals", "StringLike", "ForAnyValue:StringEquals", "ForAnyValue:StringLike"}
+
+# Different operators are AND'd, so one operator whose values all pin the claim is enough.
+# sts.amazonaws.com has no wildcard, so StringLike matches it exactly too.
 aud_ok(cond) if {
-	vals := [p[1] | some p in pairs(cond, aud_key); p[0] == "StringEquals"]
+	some op in pin_ops
+	vals := values_for(cond, aud_key, op)
 	count(vals) > 0
 	every v in vals {
 		v == "sts.amazonaws.com"
@@ -122,12 +133,13 @@ safe_sub(op, v) if {
 	not contains(r, "?")
 }
 
-# Values of one key are OR'd, so every sub value must be safe.
+# Values of one key are OR'd, so every sub value under the operator must be safe.
 sub_ok(cond) if {
-	subs := [p | some p in pairs(cond, sub_key); p[0] in {"StringEquals", "StringLike"}]
+	some op in pin_ops
+	subs := values_for(cond, sub_key, op)
 	count(subs) > 0
-	every p in subs {
-		safe_sub(p[0], p[1])
+	every v in subs {
+		safe_sub(base_op(op), v)
 	}
 }
 

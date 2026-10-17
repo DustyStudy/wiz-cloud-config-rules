@@ -20,4 +20,6 @@ remediation: |
   }
   ```
 
+  Server access log destinations are skipped: S3 delivers access logs only to buckets with SSE-S3, and the rule spots them by a bucket policy that allows `logging.s3.amazonaws.com`. A destination set up through the legacy LogDelivery ACL is not detected; exempt it in Wiz.
+
   Known limit: a key ID or key ARN alone cannot prove the key is customer managed, so this rule only flags SSE-S3, a missing key ID and the aws/s3 alias.

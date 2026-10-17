@@ -6,6 +6,29 @@ uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- `s3-deny-insecure-transport`: a `NumericLessThan` `s3:TlsVersion` denial no
+  longer counts, because plain HTTP requests carry no TLS version and are not
+  denied by it; `NumericLessThanIfExists` still counts. Bucket and object
+  denials may now sit in separate statements, actions and condition keys are
+  matched without regard to case, and directory buckets are skipped.
+- `s3-default-encryption-cmk`: skips directory buckets and server access log
+  destinations, found by a bucket policy that lets `logging.s3.amazonaws.com`
+  put objects in the bucket (S3 delivers access logs only to SSE-S3 buckets).
+- `sg-no-public-management-ports`: an ingress entry with no protocol is
+  treated as all traffic instead of being ignored.
+- `iam-github-oidc-trust-pinned`: one operator that pins `aud` or `sub` is
+  enough, since IAM ANDs operators; an exact `aud` under `StringLike` and
+  condition keys in any case are accepted.
+
+### Changed
+
+- The module checks `native_type_overrides` keys in variable validation and
+  no longer creates a `terraform_data` resource for it. Empty native type
+  strings in `rule.yaml` are rejected.
+- `scripts/check-rules.sh` writes coverage to a temporary file.
+
 ## [0.1.0] - 2026-10-17
 
 ### Added
