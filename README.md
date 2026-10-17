@@ -87,7 +87,7 @@ provider "wiz" {
 }
 
 module "wiz_rules" {
-  source = "git::https://github.com/DustyStudy/wiz-cloud-config-rules.git//terraform?ref=v0.1.0"
+  source = "git::https://github.com/DustyStudy/wiz-cloud-config-rules.git//terraform?ref=v0.2.0"
 
   # Pilot on a few accounts first. Widening later may need a replace; see the README.
   # scope_account_ids = ["<wiz-cloud-account-id>"]
