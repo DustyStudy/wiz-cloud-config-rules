@@ -1,17 +1,9 @@
 version: 2
 updates:
+  # No terraform ecosystem: Dependabot's proxy cannot reach tf.app.wiz.io, and the
+  # module pins the provider with ">= 1.28" and commits no lock file, so there is nothing to bump.
   - package-ecosystem: "github-actions"
     directory: "/"
-    schedule:
-      interval: "weekly"
-    cooldown:
-      default-days: 7
-    open-pull-requests-limit: 5
-
-  - package-ecosystem: "terraform"
-    directories:
-      - "/terraform"
-      - "/examples/*"
     schedule:
       interval: "weekly"
     cooldown:
