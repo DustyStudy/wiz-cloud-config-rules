@@ -42,7 +42,7 @@ test_resource_star_and_principal_aws_star_pass if {
 }
 
 test_tls_version_condition_passes if {
-	s := with_cond({"NumericLessThan": {"s3:TlsVersion": "1.2"}})
+	s := with_cond({"NumericLessThanIfExists": {"s3:TlsVersion": "1.2"}})
 	wiz.result == "pass" with input as {"Name": "b", "Policy": pol([s])}
 }
 
@@ -113,7 +113,7 @@ test_extra_condition_fails if {
 }
 
 test_tls_version_too_low_fails if {
-	s := with_cond({"NumericLessThan": {"s3:TlsVersion": "1.0"}})
+	s := with_cond({"NumericLessThanIfExists": {"s3:TlsVersion": "1.0"}})
 	wiz.result == "fail" with input as {"Name": "b", "Policy": pol([s])}
 }
 
@@ -138,11 +138,32 @@ test_condition_value_list_passes if {
 }
 
 test_tls_version_list_passes if {
-	s := with_cond({"NumericLessThan": {"s3:TlsVersion": ["1.2"]}})
+	s := with_cond({"NumericLessThanIfExists": {"s3:TlsVersion": ["1.2"]}})
 	wiz.result == "pass" with input as {"Name": "b", "Policy": pol([s])}
 }
 
 test_condition_value_list_true_only_fails if {
 	s := with_cond({"Bool": {"aws:SecureTransport": ["true"]}})
 	wiz.result == "fail" with input as {"Name": "b", "Policy": pol([s])}
+}
+
+# Without IfExists, a plain HTTP request (no s3:TlsVersion key) is not denied.
+test_tls_version_without_if_exists_fails if {
+	s := with_cond({"NumericLessThan": {"s3:TlsVersion": "1.2"}})
+	wiz.result == "fail" with input as {"Name": "b", "Policy": pol([s])}
+}
+
+test_bucket_and_objects_in_separate_statements_pass if {
+	bucket_only := object.union(good, {"Resource": "arn:aws:s3:::b"})
+	objects_only := object.union(good, {"Resource": "arn:aws:s3:::b/*"})
+	wiz.result == "pass" with input as {"Name": "b", "Policy": pol([bucket_only, objects_only])}
+}
+
+test_case_insensitive_action_and_key_pass if {
+	s := object.union(with_cond({"Bool": {"aws:securetransport": "false"}}), {"Action": "S3:*"})
+	wiz.result == "pass" with input as {"Name": "b", "Policy": pol([s])}
+}
+
+test_directory_bucket_skips if {
+	wiz.result == "skip" with input as {"Name": "b--use1-az4--x-s3"}
 }

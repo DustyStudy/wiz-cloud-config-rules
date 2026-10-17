@@ -61,3 +61,32 @@ test_fail_message_no_key if {
 test_fail_message_aws_managed if {
 	wiz.currentConfiguration == "Default encryption uses the AWS managed key aws/s3." with input as enc("aws:kms", "alias/aws/s3")
 }
+
+test_directory_bucket_skips if {
+	wiz.result == "skip" with input as object.union(enc("AES256", ""), {"Name": "b--use1-az4--x-s3"})
+}
+
+log_policy := {"Statement": [{"Effect": "Allow", "Principal": {"Service": "logging.s3.amazonaws.com"}, "Action": "s3:PutObject", "Resource": "arn:aws:s3:::b/*"}]}
+
+test_access_log_destination_skips if {
+	wiz.result == "skip" with input as object.union(enc("AES256", ""), {"Policy": log_policy})
+}
+
+test_access_log_destination_json_string_skips if {
+	wiz.result == "skip" with input as object.union(enc("AES256", ""), {"Policy": json.marshal(log_policy)})
+}
+
+test_other_service_principal_still_fails if {
+	other := {"Statement": [{"Effect": "Allow", "Principal": {"Service": "cloudtrail.amazonaws.com"}, "Action": "s3:PutObject", "Resource": "arn:aws:s3:::b/*"}]}
+	wiz.result == "fail" with input as object.union(enc("AES256", ""), {"Policy": other})
+}
+
+test_logging_service_without_put_object_fails if {
+	p := {"Statement": [{"Effect": "Allow", "Principal": {"Service": "logging.s3.amazonaws.com"}, "Action": "s3:GetBucketLocation", "Resource": "arn:aws:s3:::b"}]}
+	wiz.result == "fail" with input as object.union(enc("AES256", ""), {"Policy": p})
+}
+
+test_logging_service_on_other_bucket_fails if {
+	p := {"Statement": [{"Effect": "Allow", "Principal": {"Service": "logging.s3.amazonaws.com"}, "Action": "s3:PutObject", "Resource": "arn:aws:s3:::other/*"}]}
+	wiz.result == "fail" with input as object.union(enc("AES256", ""), {"Policy": p})
+}

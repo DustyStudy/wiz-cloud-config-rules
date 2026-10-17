@@ -55,15 +55,15 @@ All content is written from public AWS, OPA and Wiz sources. Nothing comes from 
 - **Missing data never passes.** In Rego a comparison on a missing field is undefined, which would fall through to the default `pass`. Every rule reads fields with `object.get` and an explicit default, and each rule has a test with the field absent.
 - **Policy documents** (S3 bucket policy, IAM trust policy) may arrive as an object, a JSON string, or a URL-encoded JSON string (IAM `GetRole` returns RFC 3986-encoded documents). Rules decode URL-encoding when the string does not start with `{`, then parse. A document that is present but cannot be parsed is a `fail` with its own message, never a `skip` or `pass`. `Statement`, `Action`, `Principal` values and condition values may be a single item or a list.
 - **`kms-cmk-rotation`.** Eligible: `KeyManager` = `CUSTOMER`, `KeyState` = `Enabled`, `KeySpec` = `SYMMETRIC_DEFAULT`, `Origin` = `AWS_KMS` (automatic rotation is unsupported for imported material, custom key stores and HMAC/asymmetric keys). Anything else is `skip`. Input is the combined `DescribeKey.KeyMetadata` plus `GetKeyRotationStatus` fields (`KeyRotationEnabled`, `RotationPeriodInDays`); a missing period with rotation on passes (AWS default 365). Tests cover 365 (pass), 366 (fail), missing period, and missing `KeyRotationEnabled` (fail).
-- **`s3-deny-insecure-transport`.** A statement counts only if all hold: `Effect` = `Deny`; `Principal` is `"*"` or `{"AWS": "*"}`; `Action` includes `s3:*` or `*`; `Resource` covers both the bucket and its objects (`arn:<any partition>:s3:::<bucket>` and `.../<bucket>/*`, or `*`), matched by suffix so no partition is hardcoded; its only condition is `Bool` (or `BoolIfExists`) `aws:SecureTransport` = `false`, or `NumericLessThan` `s3:TlsVersion` with a value of at least 1.2. Extra conditions narrow the denial, so a statement carrying them does not count.
-- **`s3-default-encryption-cmk`.** `aws/s3` is detected as `alias/aws/s3` or an ARN ending in `:alias/aws/s3` (any partition). Limit (documented): an opaque key ID or key ARN cannot prove customer ownership from the bucket alone, so it passes.
+- **`s3-deny-insecure-transport`.** A statement counts only if all hold: `Effect` = `Deny`; `Principal` is `"*"` or `{"AWS": "*"}`; `Action` includes `s3:*` or `*` (any case); `Resource` covers the bucket or its objects, and together the qualifying statements cover both (`arn:<any partition>:s3:::<bucket>` and `.../<bucket>/*`, or `*`), matched by suffix so no partition is hardcoded; its only condition is `Bool` (or `BoolIfExists`) `aws:SecureTransport` = `false`, or `NumericLessThanIfExists` `s3:TlsVersion` with a value of at least 1.2 (plain `NumericLessThan` does not deny HTTP requests, which carry no TLS version). Condition keys match in any case. Directory buckets are skipped. Extra conditions narrow the denial, so a statement carrying them does not count.
+- **`s3-default-encryption-cmk`.** `aws/s3` is detected as `alias/aws/s3` or an ARN ending in `:alias/aws/s3` (any partition). Directory buckets and server access log destinations (bucket policy allows `logging.s3.amazonaws.com`; S3 delivers access logs only to SSE-S3 buckets) are skipped. Limit (documented): an opaque key ID or key ARN cannot prove customer ownership from the bucket alone, so it passes.
 - **S3 logging and versioning** skip directory buckets (name ends in `--x-s3`), which support neither feature.
-- **`sg-no-public-management-ports`.** Protocol is normalized (`tcp`/`6`, `udp`/`17`, `-1`/`all`). Port fields are only compared for TCP and UDP; ICMP and other protocols are ignored; `-1` fails without reading ports. UDP is included because RDP also listens on UDP 3389. IPv4 (`IpRanges[].CidrIp`) and IPv6 (`Ipv6Ranges[].CidrIpv6`) are each tested on their own.
+- **`sg-no-public-management-ports`.** Protocol is normalized (`tcp`/`6`, `udp`/`17`, `-1`/`all`). Port fields are only compared for TCP and UDP; ICMP and other protocols are ignored; `-1` fails without reading ports, and a missing protocol is treated as `-1`. UDP is included because RDP also listens on UDP 3389. IPv4 (`IpRanges[].CidrIp`) and IPv6 (`Ipv6Ranges[].CidrIpv6`) are each tested on their own.
 - **`ec2-imdsv2-required`.** `HttpEndpoint` = `disabled` passes (no IMDS exposure).
 - **`cloudtrail-integrity`** checks configuration only. It does not prove the trail is logging (`GetTrailStatus.IsLogging` is not a trail field) or which events are selected; the README says so.
 - **`iam-github-oidc-trust-pinned`.** A statement is relevant if `Effect` = `Allow`, `Action` includes `sts:AssumeRoleWithWebIdentity` (or `sts:*` / `*`), and `Principal.Federated` (string or list) contains an ARN ending in `:oidc-provider/token.actions.githubusercontent.com`. No relevant statement means `skip`. Every relevant statement must, through its conditions:
-  - require `token.actions.githubusercontent.com:aud` = `sts.amazonaws.com` (`StringEquals`, every value exactly that), and
-  - constrain `token.actions.githubusercontent.com:sub` under `StringEquals` or `StringLike` (including `ForAnyValue:` forms), where every value names a concrete owner and repository (`repo:<owner>/<repo>:...`). Under `StringLike`, a `*` or `?` in the owner or repository part fails; wildcards after the repository (branch, environment) are allowed. Under `StringEquals`, `*` is literal and cannot widen access.
+  - require `token.actions.githubusercontent.com:aud` = `sts.amazonaws.com` (`StringEquals` or `StringLike`, every value under that operator exactly that), and
+  - constrain `token.actions.githubusercontent.com:sub` under `StringEquals` or `StringLike` (including `ForAnyValue:` forms; operators are AND'd, so one fully safe operator is enough), where every value under that operator names a concrete owner and repository (`repo:<owner>/<repo>:...`). Under `StringLike`, a `*` or `?` in the owner or repository part fails; wildcards after the repository (branch, environment) are allowed. Under `StringEquals`, `*` is literal and cannot widen access.
   Values within one condition key are OR'd, so one loose value fails the statement. One safe statement never offsets a loose one.
 - No rule matches on a hardcoded `arn:aws:` partition, so all rules work in `aws-us-gov`.
 - A KMS deletion window is not a property of a live key (it exists only while deletion is pending, and AWS enforces 7-30 days), so it is out of scope.
@@ -125,9 +125,9 @@ expectedConfiguration := "<requirement in one sentence>"
 
 ## Terraform module
 
-- Reads `fileset("${path.module}/../rules", "**/rule.yaml")` (results are relative, so each path is re-prefixed before `file()`), `yamldecode`s each, and creates `wiz_cloud_configuration_rule` with `for_each` keyed by rule `id`.
+- Reads `fileset("${path.module}/../rules", "aws/*/rule.yaml")` (results are relative, so each path is re-prefixed before `file()`), `yamldecode`s each, and creates `wiz_cloud_configuration_rule` with `for_each` keyed by rule `id`.
 - Maps: `name = "${var.name_prefix}${name}"`, `description`, `severity`, `opa_policy = file(policy.rego)`, `target_native_types` (override or YAML), `remediation_instructions`, `function_as_control`, `scope_account_ids`.
-- Tags (emitted as `tags` blocks with `dynamic`): `source = wiz-cloud-config-rules`, `rule_id = <id>`, and one `nist-800-53` tag whose value is the comma-joined control list (e.g. `SC-8, SC-8(1)`). One tag rather than one per control, because whether the Wiz API accepts repeated keys is unknown. Tags are labels only; they do not associate the rule with a Wiz security framework (`security_sub_categories` does that and is out of scope).
+- Tags (three static `tags` blocks): `source = wiz-cloud-config-rules`, `rule_id = <id>`, and one `nist-800-53` tag whose value is the comma-joined control list (e.g. `SC-8, SC-8(1)`). One tag rather than one per control, because whether the Wiz API accepts repeated keys is unknown. Tags are labels only; they do not associate the rule with a Wiz security framework (`security_sub_categories` does that and is out of scope).
 - Requires `tf.app.wiz.io/wizsec/wiz >= 1.28` and Terraform `>= 1.9`. Does not configure the provider.
 - Preconditions: severity is in the provider enum; `target_native_types` (after overrides) is non-empty and has no empty strings; `id` matches its folder name. Variable validation rejects override keys that are not rule IDs.
 
@@ -157,9 +157,9 @@ Mocking proves the module's wiring, not that the Wiz API accepts the values. A r
 
 ## CI and repository standard
 
-- `ci.yml`: Rego job (OPA installed as a checksum-pinned binary); Terraform job matrix 1.9.8 and 1.16.4 (`fmt -check`, `init -backend=false`, `validate`, `test`); zizmor job (`--min-severity medium`).
-- `security-scan.yml`: Checkov, Trivy, Gitleaks.
-- harden-runner (audit) first in every job; actions pinned by SHA; Dependabot for `github-actions` and `terraform` with a 7-day cooldown.
+- `ci.yml`: Rego job (OPA installed as a checksum-pinned binary); Terraform job matrix 1.9.8 and 1.16.4 (`fmt -check`, `init -backend=false`, `validate`, `test`). zizmor runs in the shared security-scan workflow.
+- `security-scan.yml`: calls the shared DustyStudy workflow (Checkov, Trivy, Gitleaks, zizmor).
+- harden-runner (audit) first in every job; actions pinned by SHA; Dependabot for `github-actions` with a 7-day cooldown (its proxy cannot reach `tf.app.wiz.io`, so there is no `terraform` ecosystem).
 - `.gitattributes` forcing LF line endings.
 - After the first merge: `main` protection matching fedramp-terraform-library (required checks strict, `enforce_admins`, linear history, conversation resolution, no force-push or delete); delete branch on merge; wiki and projects off.
 
@@ -168,15 +168,6 @@ Mocking proves the module's wiring, not that the Wiz API accepts the values. A r
 - README: summary; rule table with 800-53 controls; quickstart for paste and for Terraform; adding a rule; validation status (verified by `opa test` and `terraform test`, plus the first-tenant check: confirm native types, run each rule's test against one real resource, set `native_type_overrides`); a mermaid diagram (rule folder → `opa test` → Terraform → Wiz).
 - LICENSE (MIT), SECURITY.md, CHANGELOG.md.
 - No employer references; no job-search wording.
-
-## Delivery
-
-- Local clone `C:\repos\wiz-cloud-config-rules`. Everything is built and verified locally first (`opa`, `terraform test`, Checkov, Trivy, Gitleaks, zizmor run on the workstation).
-- Private-repo Actions minutes are exhausted for the month, so a private repo cannot run CI. The GitHub repo is created only on the user's go, as public (free Actions) unless the user decides otherwise.
-- Codex (Astra) reviewed this spec on 2026-10-17 (16 findings; 15 applied, the CI-scope finding declined to keep the repo consistent with the owner's portfolio standard). One more review of the finished local branch before anything is pushed; at most one confirmation pass.
-- `main` holds the initial commit; all work lands in one PR from `feat/initial-rules`; the user merges.
-- After merge: tag and release `v0.1.0`. Making the repo public is the user's decision.
-- The implementation plan stays out of git via `.git/info/exclude`.
 
 ## Out of scope (v0.1.0)
 

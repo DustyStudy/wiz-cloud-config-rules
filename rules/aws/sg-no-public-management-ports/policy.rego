@@ -31,7 +31,8 @@ permissions_known if is_array(permissions)
 # TCP and UDP (RDP also listens on UDP 3389), by name or protocol number.
 port_protocols := {"tcp", "6", "udp", "17"}
 
-all_protocols := {"-1", "all"}
+# A missing protocol is unknown, so it is treated as all traffic (fail closed).
+all_protocols := {"-1", "all", ""}
 
 public(p) if {
 	some r in fieldd(p, "IpRanges", "ipRanges", [])

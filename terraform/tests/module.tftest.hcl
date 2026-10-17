@@ -77,5 +77,5 @@ run "rejects_unknown_override_key" {
     native_type_overrides = { "not-a-rule" = ["bucket"] }
   }
 
-  expect_failures = [terraform_data.override_keys]
+  expect_failures = [var.native_type_overrides]
 }

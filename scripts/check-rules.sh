@@ -9,16 +9,18 @@ if ! opa fmt --fail --list rules >/dev/null; then
   exit 1
 fi
 
+coverage=$(mktemp)
+trap 'rm -f "${coverage}"' EXIT
+
 status=0
 for dir in rules/aws/*/; do
   echo "== ${dir}"
   opa check --strict "${dir}" || status=1
   opa check --v0-compatible "${dir}" || status=1
-  if ! opa test --coverage --threshold 90 "${dir}" > coverage.json; then
+  if ! opa test --coverage --threshold 90 "${dir}" > "${coverage}"; then
     opa test -v "${dir}" || true
-    echo "coverage: $(jq -r .coverage coverage.json 2>/dev/null)%" >&2
+    echo "coverage: $(jq -r .coverage "${coverage}" 2>/dev/null)%" >&2
     status=1
   fi
 done
-rm -f coverage.json
 exit "${status}"

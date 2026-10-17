@@ -17,7 +17,7 @@ provider "wiz" {
 module "wiz_rules" {
   source = "../../terraform"
 
-  # Pilot on a few accounts first, then remove to assess all accounts.
+  # Pilot on a few accounts first. Widening later may need a replace; see the README.
   # scope_account_ids = ["<wiz-cloud-account-id>"]
 }
 

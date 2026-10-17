@@ -168,3 +168,31 @@ test_unrelated_sts_action_skips if {
 test_forallvalues_sub_fails if {
 	wiz.result == "fail" with input as role([pinned("ForAllValues:StringLike", "repo:org/app:*")])
 }
+
+# Operators are AND'd: an exact StringEquals pin holds even beside a loose StringLike.
+test_exact_pin_beside_loose_stringlike_passes if {
+	s := stmt({
+		"StringEquals": object.union(aud, {"token.actions.githubusercontent.com:sub": "repo:org/app:ref:refs/heads/main"}),
+		"StringLike": {"token.actions.githubusercontent.com:sub": "repo:org/*"},
+	})
+	wiz.result == "pass" with input as role([s])
+}
+
+test_aud_exact_under_stringlike_passes if {
+	s := stmt({"StringLike": {"token.actions.githubusercontent.com:aud": "sts.amazonaws.com", "token.actions.githubusercontent.com:sub": "repo:org/app:*"}})
+	wiz.result == "pass" with input as role([s])
+}
+
+test_condition_keys_case_insensitive_pass if {
+	s := stmt({"StringEquals": {"token.actions.githubusercontent.com:AUD": "sts.amazonaws.com", "Token.Actions.GitHubUserContent.com:Sub": "repo:org/app:ref:refs/heads/main"}})
+	wiz.result == "pass" with input as role([s])
+}
+
+test_safe_stringlike_beside_loose_foranyvalue_passes if {
+	s := stmt({
+		"StringEquals": aud,
+		"StringLike": {"token.actions.githubusercontent.com:sub": "repo:org/app:*"},
+		"ForAnyValue:StringLike": {"token.actions.githubusercontent.com:sub": "repo:org/*"},
+	})
+	wiz.result == "pass" with input as role([s])
+}
