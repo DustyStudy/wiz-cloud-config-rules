@@ -1,0 +1,17 @@
+id: kms-cmk-rotation
+name: KMS customer managed key rotation is enabled
+description: Enabled, customer managed, symmetric KMS keys with KMS-generated material must rotate automatically at least every 365 days.
+severity: HIGH
+target_native_types: [key]
+nist_800_53: [SC-12, SC-28]
+remediation: |
+  Enable automatic rotation on the key.
+
+  ```hcl
+  resource "aws_kms_key" "this" {
+    description             = "Customer managed key"
+    enable_key_rotation     = true
+    rotation_period_in_days = 365
+    deletion_window_in_days = 30
+  }
+  ```
