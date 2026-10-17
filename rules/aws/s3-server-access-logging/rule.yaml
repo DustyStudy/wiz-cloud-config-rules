@@ -1,0 +1,16 @@
+id: s3-server-access-logging
+name: S3 bucket server access logging is enabled
+description: General purpose S3 buckets must deliver server access logs to a target bucket so requests can be audited.
+severity: MEDIUM
+target_native_types: [bucket]
+nist_800_53: [AU-2, AU-12]
+remediation: |
+  Enable server access logging to a dedicated log bucket.
+
+  ```hcl
+  resource "aws_s3_bucket_logging" "this" {
+    bucket        = aws_s3_bucket.this.id
+    target_bucket = aws_s3_bucket.logs.id
+    target_prefix = "s3/${aws_s3_bucket.this.id}/"
+  }
+  ```
