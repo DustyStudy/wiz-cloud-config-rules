@@ -1,7 +1,7 @@
 # wiz-cloud-config-rules: design
 
 Date: 2026-10-17
-Status: draft, revised after peer review; pending owner review
+Status: approved 2026-10-17 (revised after peer review)
 
 ## Goal
 
@@ -32,7 +32,7 @@ All content is written from public AWS, OPA and Wiz sources. Nothing comes from 
 
 - **Native type names.** The `target_native_types` strings for each AWS resource are listed only in login-gated Wiz docs. `rule.yaml` holds a best guess; the module's `native_type_overrides` variable corrects them without a fork.
 - **Input JSON shape.** Fixtures follow AWS API output (as public Wiz examples do). Wiz may nest or rename fields. Rules read fields defensively, but the first-tenant check must confirm each rule against one real resource.
-- **Wiz OPA version and builtins.** Unknown. The dual-mode `opa check` (verified locally on OPA 1.21.2: `future.keywords` imports pass v1, v1 `--strict` and `--v0-compatible`) covers syntax, not which builtins Wiz's runtime supports. Rules stick to common builtins (`json.unmarshal`, `urlquery.decode`, `object.get`, `startswith`, `endswith`, `contains`, `regex.match`, `to_number`); the first-tenant check confirms them.
+- **Wiz OPA version and builtins.** Unknown. The dual-mode `opa check` (verified locally on OPA 1.21.2: `future.keywords` imports pass v1, v1 `--strict` and `--v0-compatible`) covers syntax, not which builtins Wiz's runtime supports. Rules stick to common builtins (`json.unmarshal`, `urlquery.decode`, `object.get`, `startswith`, `endswith`, `contains`, `regex.match`, `to_number`, `array.concat`, `glob.match`); the first-tenant check confirms them.
 
 ## Rules (v0.1.0)
 
