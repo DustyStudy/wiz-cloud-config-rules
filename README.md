@@ -21,7 +21,7 @@ the included Terraform module.
   absent. Policy documents are parsed whether Wiz hands them over as an
   object, a JSON string or a URL-encoded string. No rule hard-codes the
   `arn:aws:` partition, so the same rules work in GovCloud.
-- **Result:** 133 `opa test` cases across nine rules, each rule at 96% line
+- **Result:** 146 `opa test` cases across nine rules, each rule at 96% line
   coverage or higher, checked in OPA v1 and v0-compatible modes. Five
   `terraform test` runs prove the module's wiring on Terraform 1.9.8 and
   1.16.4 with a mocked Wiz provider.
@@ -72,6 +72,15 @@ A rule is partial evidence for a control, not a full implementation of it.
 ### Deploy with Terraform
 
 ```hcl
+terraform {
+  required_providers {
+    wiz = {
+      source  = "tf.app.wiz.io/wizsec/wiz"
+      version = ">= 1.28"
+    }
+  }
+}
+
 provider "wiz" {
   # Credentials come from WIZ_CLIENT_ID and WIZ_CLIENT_SECRET.
   # environment = "gov" # or "fedramp" for Wiz for Gov tenants
@@ -134,7 +143,7 @@ Each rule gets three tags: `source = wiz-cloud-config-rules`, `rule_id`, and
 - `cloudtrail-integrity` checks configuration. It does not show that the
   trail is logging; use `aws cloudtrail get-trail-status` for that.
 - Rules use common OPA built-ins (`json.unmarshal`, `urlquery.decode`,
-  `object.get`, `array.concat` and string functions). The Wiz runtime's
+  `object.get`, `array.concat`, `glob.match` and string functions). The Wiz runtime's
   built-in support is confirmed in step 2.
 
 ## Add a rule

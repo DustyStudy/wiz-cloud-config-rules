@@ -71,3 +71,11 @@ test_fail_message_disabled if {
 test_fail_message_period if {
 	wiz.currentConfiguration == "Key rotation period is 366 days." with input as key({"KeyRotationEnabled": true, "RotationPeriodInDays": 366})
 }
+
+test_invalid_period_fails if {
+	wiz.result == "fail" with input as key({"KeyRotationEnabled": true, "RotationPeriodInDays": "bad"})
+}
+
+test_null_period_uses_default if {
+	wiz.result == "pass" with input as key({"KeyRotationEnabled": true, "RotationPeriodInDays": null})
+}

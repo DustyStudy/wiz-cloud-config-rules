@@ -131,3 +131,18 @@ test_all_buckets_arn_wildcard_passes if {
 	s := object.union(good, {"Resource": "arn:aws:s3:::*"})
 	wiz.result == "pass" with input as {"Name": "b", "Policy": pol([s])}
 }
+
+test_condition_value_list_passes if {
+	s := with_cond({"Bool": {"aws:SecureTransport": ["false"]}})
+	wiz.result == "pass" with input as {"Name": "b", "Policy": pol([s])}
+}
+
+test_tls_version_list_passes if {
+	s := with_cond({"NumericLessThan": {"s3:TlsVersion": ["1.2"]}})
+	wiz.result == "pass" with input as {"Name": "b", "Policy": pol([s])}
+}
+
+test_condition_value_list_true_only_fails if {
+	s := with_cond({"Bool": {"aws:SecureTransport": ["true"]}})
+	wiz.result == "fail" with input as {"Name": "b", "Policy": pol([s])}
+}

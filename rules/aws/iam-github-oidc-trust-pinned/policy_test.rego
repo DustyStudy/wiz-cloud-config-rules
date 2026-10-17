@@ -148,3 +148,23 @@ test_unparseable_fails if {
 test_fail_message if {
 	wiz.currentConfiguration == "A GitHub OIDC trust statement is not pinned to a specific repository with aud sts.amazonaws.com." with input as role([pinned("StringLike", "repo:org/*")])
 }
+
+test_lowercase_action_is_relevant if {
+	s := object.union(pinned("StringLike", "repo:org/*"), {"Action": "sts:assumerolewithwebidentity"})
+	wiz.result == "fail" with input as role([s])
+}
+
+test_wildcard_action_is_relevant if {
+	s := object.union(pinned("StringLike", "repo:org/*"), {"Action": "sts:AssumeRole*"})
+	wiz.result == "fail" with input as role([s])
+}
+
+test_unrelated_sts_action_skips if {
+	s := object.union(pinned("StringLike", "repo:org/*"), {"Action": "sts:TagSession"})
+	wiz.result == "skip" with input as role([s])
+}
+
+# ForAllValues matches when the claim is absent, so it cannot pin a role.
+test_forallvalues_sub_fails if {
+	wiz.result == "fail" with input as role([pinned("ForAllValues:StringLike", "repo:org/app:*")])
+}

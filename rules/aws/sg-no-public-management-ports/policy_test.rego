@@ -25,8 +25,8 @@ test_no_rules_passes if {
 	wiz.result == "pass" with input as sg([])
 }
 
-test_permissions_absent_passes if {
-	wiz.result == "pass" with input as {"GroupId": "sg-1"}
+test_permissions_absent_fails if {
+	wiz.result == "fail" with input as {"GroupId": "sg-1"}
 }
 
 test_ssh_public_v4_fails if {
@@ -75,4 +75,20 @@ test_fail_message if {
 
 test_fail_message_both_ports if {
 	wiz.currentConfiguration == "Ingress open to the internet on management port(s): 22, 3389." with input as sg([{"IpProtocol": "-1", "Ipv6Ranges": [{"CidrIpv6": "::/0"}]}])
+}
+
+test_permissions_null_fails if {
+	wiz.result == "fail" with input as {"IpPermissions": null}
+}
+
+test_invalid_port_string_treated_as_open_fails if {
+	wiz.result == "fail" with input as sg([{"IpProtocol": "TCP", "FromPort": "bad", "ToPort": "3389", "IpRanges": [{"CidrIp": "0.0.0.0/0"}]}])
+}
+
+test_string_ports_parse if {
+	wiz.result == "pass" with input as sg([perm("tcp", "443", "443", ["0.0.0.0/0"], [])])
+}
+
+test_unavailable_message if {
+	wiz.currentConfiguration == "Security group ingress rules are not available." with input as {"GroupId": "sg-1"}
 }

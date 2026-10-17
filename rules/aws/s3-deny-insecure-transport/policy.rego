@@ -90,14 +90,16 @@ transport_condition(c) if {
 	some op in ["Bool", "BoolIfExists"]
 	keys := object.get(c, op, {})
 	count(keys) == 1
-	false_value(keys["aws:SecureTransport"])
+	some v in as_list(keys["aws:SecureTransport"])
+	false_value(v)
 }
 
 transport_condition(c) if {
 	count(c) == 1
 	keys := object.get(c, "NumericLessThan", {})
 	count(keys) == 1
-	to_number(keys["s3:TlsVersion"]) >= 1.2
+	some v in as_list(keys["s3:TlsVersion"])
+	to_number(v) >= 1.2
 }
 
 compliant(s) if {

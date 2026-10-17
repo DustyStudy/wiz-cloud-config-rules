@@ -34,6 +34,9 @@ rotation_enabled := fieldd(input, "KeyRotationEnabled", "keyRotationEnabled", fa
 # AWS defaults the rotation period to 365 days when rotation is enabled without one.
 period := fieldd(input, "RotationPeriodInDays", "rotationPeriodInDays", 365)
 
+# A supplied period that is not a number fails rather than falling through to pass.
+period_ok if to_number(period) <= 365
+
 default result := "pass"
 
 result := "skip" if {
@@ -41,7 +44,7 @@ result := "skip" if {
 } else := "fail" if {
 	rotation_enabled != true
 } else := "fail" if {
-	to_number(period) > 365
+	not period_ok
 }
 
 currentConfiguration := "Automatic key rotation is disabled." if {

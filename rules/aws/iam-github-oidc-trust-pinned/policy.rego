@@ -60,7 +60,9 @@ sub_key := sprintf("%s:sub", [gh])
 
 assume_action(a) if {
 	some v in as_list(a)
-	v in {"*", "sts:*", "sts:AssumeRoleWithWebIdentity"}
+
+	# IAM action names are case-insensitive and may use * and ? wildcards.
+	glob.match(lower(v), [], "sts:assumerolewithwebidentity")
 }
 
 # Matches the GitHub OIDC provider ARN in any partition.
@@ -77,8 +79,9 @@ relevant contains s if {
 	github_principal(object.get(s, "Principal", {}))
 }
 
-# base_op strips the ForAnyValue:/ForAllValues: set-operator prefix.
-base_op(op) := trim_prefix(trim_prefix(op, "ForAnyValue:"), "ForAllValues:")
+# base_op strips the ForAnyValue: prefix. ForAllValues: is kept, so it never counts as pinning:
+# it matches when the claim is absent.
+base_op(op) := trim_prefix(op, "ForAnyValue:")
 
 # pairs lists [operator, value] for every value of key k in a condition block.
 pairs(cond, k) := [[base_op(op), v] |
