@@ -1,0 +1,17 @@
+id: s3-versioning-enabled
+name: S3 bucket versioning is enabled
+description: General purpose S3 buckets must have versioning enabled so overwritten or deleted objects can be recovered.
+severity: MEDIUM
+target_native_types: [bucket]
+nist_800_53: [CP-9]
+remediation: |
+  Enable versioning on the bucket.
+
+  ```hcl
+  resource "aws_s3_bucket_versioning" "this" {
+    bucket = aws_s3_bucket.this.id
+    versioning_configuration {
+      status = "Enabled"
+    }
+  }
+  ```
