@@ -1,0 +1,23 @@
+id: s3-default-encryption-cmk
+name: S3 default encryption uses a customer managed KMS key
+description: General purpose S3 buckets must default to SSE-KMS or DSSE-KMS with a customer managed key, not SSE-S3 or the AWS managed aws/s3 key.
+severity: MEDIUM
+target_native_types: [bucket]
+nist_800_53: [SC-28, SC-12]
+remediation: |
+  Set default encryption to SSE-KMS with a customer managed key.
+
+  ```hcl
+  resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
+    bucket = aws_s3_bucket.this.id
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm     = "aws:kms"
+        kms_master_key_id = aws_kms_key.this.arn
+      }
+      bucket_key_enabled = true
+    }
+  }
+  ```
+
+  Known limit: a key ID or key ARN alone cannot prove the key is customer managed, so this rule only flags SSE-S3, a missing key ID and the aws/s3 alias.
