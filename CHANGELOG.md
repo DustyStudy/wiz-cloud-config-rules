@@ -6,6 +6,8 @@ uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-17
+
 ### Added
 
 - Nine Wiz custom Cloud Configuration Rules for AWS, each with `opa test`
@@ -19,3 +21,6 @@ uses [Semantic Versioning](https://semver.org/).
   `terraform test` coverage.
 - CI for Rego (OPA v1 and v0-compatible checks, tests with coverage) and
   Terraform 1.9.8 and 1.16.4, plus Gitleaks, Checkov, Trivy and zizmor.
+
+[Unreleased]: https://github.com/DustyStudy/wiz-cloud-config-rules/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/DustyStudy/wiz-cloud-config-rules/releases/tag/v0.1.0
