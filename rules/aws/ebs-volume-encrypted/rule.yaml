@@ -1,0 +1,20 @@
+id: ebs-volume-encrypted
+name: EBS volume is encrypted
+description: EBS volumes must be encrypted at rest. The rule cannot tell a customer managed key from the aws/ebs key by ARN alone, so set account default encryption to a customer managed key.
+severity: HIGH
+target_native_types: [volume]
+nist_800_53: [SC-28, SC-28(1)]
+remediation: |
+  Turn on EBS encryption by default with a customer managed key, then replace
+  unencrypted volumes: snapshot, copy the snapshot with encryption, and create
+  a new volume from the copy.
+
+  ```hcl
+  resource "aws_ebs_encryption_by_default" "this" {
+    enabled = true
+  }
+
+  resource "aws_ebs_default_kms_key" "this" {
+    key_arn = aws_kms_key.ebs.arn
+  }
+  ```

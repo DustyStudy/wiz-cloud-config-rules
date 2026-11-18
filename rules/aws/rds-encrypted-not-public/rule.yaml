@@ -1,0 +1,19 @@
+id: rds-encrypted-not-public
+name: RDS DB instance is encrypted with KMS and not publicly accessible
+description: RDS DB instances must encrypt storage with a KMS key and must not have a public endpoint. Like other rules here, it cannot tell a customer managed key from the aws/rds key by ARN alone.
+severity: HIGH
+target_native_types: [DBInstance]
+nist_800_53: [SC-28, SC-28(1), SC-7]
+remediation: |
+  Encrypt storage with a customer managed KMS key and turn off public access.
+  Encryption cannot be turned on in place: snapshot the instance, copy the
+  snapshot with a KMS key, and restore from the copy.
+
+  ```hcl
+  resource "aws_db_instance" "this" {
+    # ...
+    storage_encrypted   = true
+    kms_key_id          = aws_kms_key.rds.arn
+    publicly_accessible = false
+  }
+  ```

@@ -1,0 +1,17 @@
+id: cloudwatch-log-group-retention-kms
+name: CloudWatch log group is KMS encrypted and keeps logs for 365 days
+description: CloudWatch Logs log groups must be encrypted with a KMS key and keep logs for at least 365 days, or never expire. The 365-day floor follows OMB M-21-31 and is guidance; set min_retention_days in the policy to your AU-11 retention.
+severity: MEDIUM
+target_native_types: [logGroup]
+nist_800_53: [AU-9, AU-11]
+remediation: |
+  Set retention and a customer managed KMS key on the log group. The key
+  policy must allow the `logs.<region>.amazonaws.com` service principal.
+
+  ```hcl
+  resource "aws_cloudwatch_log_group" "this" {
+    name              = "/app"
+    retention_in_days = 365
+    kms_key_id        = aws_kms_key.logs.arn
+  }
+  ```
