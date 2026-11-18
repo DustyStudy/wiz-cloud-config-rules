@@ -6,6 +6,16 @@ uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `s3-block-public-access`: all four bucket-level Block Public Access
+  settings must be on (AC-3, AC-4, SC-7).
+- `rds-encrypted-not-public`: DB instances must encrypt storage with a KMS
+  key and not be publicly accessible (SC-28, SC-28(1), SC-7).
+- `ebs-volume-encrypted`: EBS volumes must be encrypted (SC-28, SC-28(1)).
+- `cloudwatch-log-group-retention-kms`: log groups must use a KMS key and
+  keep logs at least 365 days or never expire (AU-9, AU-11).
+
 ## [0.2.0] - 2026-10-17
 
 ### Fixed

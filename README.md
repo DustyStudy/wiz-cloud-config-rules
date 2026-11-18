@@ -21,7 +21,7 @@ the included Terraform module.
   absent. Policy documents are parsed whether Wiz hands them over as an
   object, a JSON string or a URL-encoded string. No rule hard-codes the
   `arn:aws:` partition, so the same rules work in GovCloud.
-- **Result:** 162 `opa test` cases across nine rules, each rule at 96% line
+- **Result:** 191 `opa test` cases across 13 rules, each rule at 96% line
   coverage or higher, checked in OPA v1 and v0-compatible modes. Five
   `terraform test` runs prove the module's wiring on Terraform 1.9.8 and
   1.16.4 with a mocked Wiz provider.
@@ -56,6 +56,10 @@ flowchart LR
 | [`ec2-imdsv2-required`](rules/aws/ec2-imdsv2-required) | The metadata endpoint is on and `HttpTokens` is not `required` | HIGH | AC-3, CM-6 |
 | [`cloudtrail-integrity`](rules/aws/cloudtrail-integrity) | A trail lacks log file validation, a KMS key, or multi-region coverage | HIGH | AU-9, AU-9(3), AU-12 |
 | [`iam-github-oidc-trust-pinned`](rules/aws/iam-github-oidc-trust-pinned) | Any statement trusting `token.actions.githubusercontent.com` does not require `aud` = `sts.amazonaws.com` and a `sub` naming a concrete owner and repository | CRITICAL | AC-3, AC-6, IA-8 |
+| [`s3-block-public-access`](rules/aws/s3-block-public-access) | Any of the four bucket-level Block Public Access settings is not `true`. Directory buckets are skipped | HIGH | AC-3, AC-4, SC-7 |
+| [`rds-encrypted-not-public`](rules/aws/rds-encrypted-not-public) | A DB instance has unencrypted storage, no KMS key, or `PubliclyAccessible` not `false` | HIGH | SC-28, SC-28(1), SC-7 |
+| [`ebs-volume-encrypted`](rules/aws/ebs-volume-encrypted) | An EBS volume is not encrypted | HIGH | SC-28, SC-28(1) |
+| [`cloudwatch-log-group-retention-kms`](rules/aws/cloudwatch-log-group-retention-kms) | A log group has no KMS key, or expires logs in under 365 days (never-expire passes) | MEDIUM | AU-9, AU-11 |
 
 The control mappings show which 800-53 controls a rule provides evidence for.
 A rule is partial evidence for a control, not a full implementation of it.
@@ -128,7 +132,8 @@ Each rule gets three tags: `source = wiz-cloud-config-rules`, `rule_id`, and
 **Confirm on first use in a tenant (about five minutes)**
 
 1. In the rule editor, check the native type for each resource. The names in
-   `rule.yaml` (`bucket`, `key`, `securityGroup`, `instance`, `trail`, `role`)
+   `rule.yaml` (`bucket`, `key`, `securityGroup`, `instance`, `trail`, `role`,
+   `DBInstance`, `volume`, `logGroup`)
    follow public examples; put any correction in `native_type_overrides`.
 2. Run each rule's built-in test against one real resource and compare field
    names. Rules accept AWS API PascalCase and lowerCamel keys.
@@ -147,6 +152,13 @@ Each rule gets three tags: `source = wiz-cloud-config-rules`, `rule_id`, and
   only supports with SSE-S3. It finds them by a bucket policy that allows
   `logging.s3.amazonaws.com`; a destination granted through the legacy
   LogDelivery ACL still fails and needs an exemption in Wiz.
+- `rds-encrypted-not-public` and `ebs-volume-encrypted` have the same key
+  limit: they cannot tell a customer managed key from `aws/rds` or `aws/ebs`.
+- `s3-block-public-access` sees only bucket-level settings. A bucket protected
+  only by the account-level block still fails; set both.
+- `cloudwatch-log-group-retention-kms` uses a 365-day floor from OMB M-21-31.
+  That is guidance, not a FedRAMP parameter; change `min_retention_days` to
+  the retention your AU-11 decision sets.
 - `cloudtrail-integrity` checks configuration. It does not show that the
   trail is logging; use `aws cloudtrail get-trail-status` for that.
 - Rules use common OPA built-ins (`json.unmarshal`, `urlquery.decode`,

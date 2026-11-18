@@ -1,0 +1,20 @@
+id: s3-block-public-access
+name: S3 bucket blocks all public access
+description: General purpose S3 buckets must turn on all four bucket-level Block Public Access settings, so a later ACL or bucket policy cannot expose data. Account-level settings are not visible to this rule; set both.
+severity: HIGH
+target_native_types: [bucket]
+nist_800_53: [AC-3, AC-4, SC-7]
+remediation: |
+  Turn on all four Block Public Access settings on the bucket.
+
+  ```hcl
+  resource "aws_s3_bucket_public_access_block" "this" {
+    bucket                  = aws_s3_bucket.this.id
+    block_public_acls       = true
+    ignore_public_acls      = true
+    block_public_policy     = true
+    restrict_public_buckets = true
+  }
+  ```
+
+  Also set `aws_s3_account_public_access_block` in every account.
