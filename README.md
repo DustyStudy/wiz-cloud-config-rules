@@ -114,6 +114,20 @@ later, and needs a Wiz service account with `create:cloud_configuration`,
 Each rule gets three tags: `source = wiz-cloud-config-rules`, `rule_id`, and
 `nist-800-53` with the rule's controls.
 
+**Confirm on first use in a tenant (about five minutes)**
+
+1. In the rule editor, check the native type for each resource. The names in
+   `rule.yaml` (`bucket`, `key`, `securityGroup`, `instance`, `trail`, `role`,
+   `DBInstance`, `volume`, `logGroup`)
+   follow public examples; put any correction in `native_type_overrides`.
+2. Run each rule's built-in test against one real resource and compare field
+   names. Rules accept AWS API PascalCase and lowerCamel keys.
+3. Apply with `scope_account_ids` set to one account. The provider marks
+   this argument Optional and Computed, so deleting it later may keep the
+   pilot scope in state. After widening, check the rule's scope in Wiz; if it
+   did not change, run `terraform apply -replace` on the rule.
+4. Review the findings before turning on `function_as_control`.
+
 ## Validation status
 
 **Verified offline**
@@ -128,20 +142,6 @@ Each rule gets three tags: `source = wiz-cloud-config-rules`, `rule_id`, and
   set, and that invalid overrides are rejected.
 - The provider resource and arguments were taken from the official provider's
   published schema (1.28.19776).
-
-**Confirm on first use in a tenant (about five minutes)**
-
-1. In the rule editor, check the native type for each resource. The names in
-   `rule.yaml` (`bucket`, `key`, `securityGroup`, `instance`, `trail`, `role`,
-   `DBInstance`, `volume`, `logGroup`)
-   follow public examples; put any correction in `native_type_overrides`.
-2. Run each rule's built-in test against one real resource and compare field
-   names. Rules accept AWS API PascalCase and lowerCamel keys.
-3. Apply with `scope_account_ids` set to one account. The provider marks
-   this argument Optional and Computed, so deleting it later may keep the
-   pilot scope in state. After widening, check the rule's scope in Wiz; if it
-   did not change, run `terraform apply -replace` on the rule.
-4. Review the findings before turning on `function_as_control`.
 
 **Known limits**
 
